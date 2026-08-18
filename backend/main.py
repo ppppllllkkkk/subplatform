@@ -1,9 +1,9 @@
 import os
 import tempfile
 
-from fastapi import BackgroundTasks, FastAPI, File, HTTPException, UploadFile
+from fastapi import BackgroundTasks, FastAPI, File, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from starlette.background import BackgroundTask
 from pydantic import BaseModel
 
@@ -13,6 +13,7 @@ from cbe_data import CANONICAL_ITEMS, VENDORS, guess_vendor
 from cbe_extract import extract_vendor_items
 from cbe_match import match_vendor_items
 from cbe_generate import generate_cbe_xlsx
+import db
 
 app = FastAPI(title="Subcontractor Platform API")
 
@@ -29,9 +30,32 @@ if FRONTEND_ORIGIN and not FRONTEND_ORIGIN.startswith(("http://", "https://")):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[FRONTEND_ORIGIN],
-    allow_methods=["POST", "GET"],
+    allow_methods=["POST", "GET", "DELETE"],
     allow_headers=["*"],
 )
+
+# --- Пароль на весь сайт (пока команда небольшая — один общий пароль) ---
+#
+# Задаётся переменной окружения APP_PASSWORD (на Render — sync: false,
+# спросится один раз при создании Blueprint'а). Если переменная не задана —
+# проверка отключена (например, для локальной разработки).
+APP_PASSWORD = os.environ.get("APP_PASSWORD")
+
+# Пути, которые остаются доступны без пароля: health-check самого Render.
+_PUBLIC_PATHS = {"/api/health"}
+
+
+@app.middleware("http")
+async def check_password(request: Request, call_next):
+    if APP_PASSWORD and request.url.path.startswith("/api") and request.url.path not in _PUBLIC_PATHS:
+        if request.headers.get("X-App-Password") != APP_PASSWORD:
+            return JSONResponse(status_code=401, content={"detail": "Неверный пароль"})
+    return await call_next(request)
+
+
+@app.on_event("startup")
+def on_startup():
+    db.init_db()
 
 
 class RfqFields(BaseModel):
@@ -54,6 +78,37 @@ class CbeGenerateRequest(BaseModel):
 
 @app.get("/api/health")
 def health():
+    return {"status": "ok"}
+
+
+# --- Общая база субподрядчиков (шарится между всеми, кто открыл сайт) ---
+
+
+class WorkbookPayload(BaseModel):
+    fileName: str
+    categories: list
+
+
+@app.get("/api/database")
+def database_get():
+    if not db.is_configured():
+        raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
+    return db.load_workbook()
+
+
+@app.post("/api/database")
+def database_save(payload: WorkbookPayload):
+    if not db.is_configured():
+        raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
+    db.save_workbook(payload.fileName, payload.categories)
+    return {"status": "ok"}
+
+
+@app.delete("/api/database")
+def database_clear():
+    if not db.is_configured():
+        raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
+    db.clear_workbook()
     return {"status": "ok"}
 
 

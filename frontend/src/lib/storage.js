@@ -1,17 +1,17 @@
 // Слой хранения данных.
 //
-// Сейчас реализован через localStorage — этого достаточно для локальной
-// разработки и демонстрации. Когда появится бэкенд, эти три функции
-// (loadWorkbook / saveWorkbook / clearWorkbook) нужно будет переписать на
-// обращения к API — остальной код приложения их вызовы не заметит,
-// так как сигнатуры (async, те же аргументы) уже рассчитаны на сетевой вызов.
+// Раньше был localStorage (у каждого свой браузер, свои данные). Теперь
+// база субподрядчиков общая на всю команду — эти три функции обращаются
+// к бэкенду (см. api.js), который хранит её в Postgres. Сигнатуры (async,
+// те же аргументы) не изменились, так что остальной код приложения не
+// заметил переключения.
 
-const STORAGE_KEY = "subcontractor-workbook";
+import { fetchDatabase, saveDatabase, clearDatabase } from "./api.js";
 
 export async function loadWorkbook() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const data = await fetchDatabase();
+    return data && data.fileName ? data : null;
   } catch (e) {
     console.error("Storage read error:", e);
     return null;
@@ -20,7 +20,7 @@ export async function loadWorkbook() {
 
 export async function saveWorkbook(payload) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    await saveDatabase(payload.fileName, payload.categories);
   } catch (e) {
     console.error("Storage write error:", e);
   }
@@ -28,7 +28,7 @@ export async function saveWorkbook(payload) {
 
 export async function clearWorkbook() {
   try {
-    localStorage.removeItem(STORAGE_KEY);
+    await clearDatabase();
   } catch (e) {
     console.error("Storage clear error:", e);
   }

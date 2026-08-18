@@ -3,6 +3,8 @@ import { Upload, RefreshCw, Loader2 } from "lucide-react";
 import { styles } from "./styles.js";
 import { parseWorkbook, exportCategoryToXlsx, guessColIndex } from "./lib/workbook.js";
 import { loadWorkbook, saveWorkbook } from "./lib/storage.js";
+import { getStoredPassword } from "./lib/api.js";
+import PasswordGate from "./components/PasswordGate.jsx";
 import Sidebar from "./components/Sidebar.jsx";
 import CategoryDashboard from "./components/CategoryDashboard.jsx";
 import CategoryDetail, { LIST_BATCH } from "./components/CategoryDetail.jsx";
@@ -12,6 +14,7 @@ import CbeScreen from "./components/CbeScreen.jsx";
 const PAGE_SIZE = 50;
 
 export default function App() {
+  const [authed, setAuthed] = useState(() => !!getStoredPassword());
   const [section, setSection] = useState("database"); // "database" | "rfq"
 
   // --- Загруженная книга (Subcontractor Database) ---
@@ -35,6 +38,7 @@ export default function App() {
   const [page, setPage] = useState(0);
 
   useEffect(() => {
+    if (!authed) return;
     (async () => {
       const saved = await loadWorkbook();
       if (saved) {
@@ -43,7 +47,7 @@ export default function App() {
       }
       setLoading(false);
     })();
-  }, []);
+  }, [authed]);
 
   const handleFile = useCallback(async (file) => {
     setParsing(true);
@@ -157,6 +161,10 @@ export default function App() {
   }, [viewMode, filteredRows, selectedRowIdx, activeCat]);
 
   const selectedRow = activeCat && selectedRowIdx !== null ? activeCat.rows[selectedRowIdx] : null;
+
+  if (!authed) {
+    return <PasswordGate onSuccess={() => setAuthed(true)} />;
+  }
 
   if (loading) {
     return (

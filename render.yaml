@@ -25,6 +25,12 @@ services:
           name: subcontractor-platform-web
           type: web
           envVarKey: RENDER_EXTERNAL_HOSTNAME
+      - key: APP_PASSWORD
+        sync: false # спросит один раз при создании Blueprint'а в дашборде
+      - key: DATABASE_URL
+        fromDatabase:
+          name: subcontractor-platform-db
+          property: connectionString
 
   # --- Frontend: React + Vite, статическая сборка ---
   - type: web
@@ -39,3 +45,10 @@ services:
           name: subcontractor-platform-api
           type: web
           envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+databases:
+  # Бесплатный план: 1 ГБ, автоматически удаляется через 30 дней после
+  # создания (ограничение Render). Для постоянного хранения нужно будет
+  # перевести на платный план — поменять plan: free на, например, basic-256mb.
+  - name: subcontractor-platform-db
+    plan: free
