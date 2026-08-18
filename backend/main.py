@@ -50,6 +50,12 @@ _PUBLIC_PATHS = {"/api/health"}
 
 @app.middleware("http")
 async def check_password(request: Request, call_next):
+    # OPTIONS — служебный preflight-запрос браузера перед настоящим запросом
+    # (проверяет CORS), пароля в нём нет и не будет — это нормально. Если
+    # блокировать его тут, до CORS-мидлвара с заголовками дело не дойдёт,
+    # и браузер решит, что весь запрос запрещён (эта ошибка уже была).
+    if request.method == "OPTIONS":
+        return await call_next(request)
     if APP_PASSWORD and request.url.path.startswith("/api") and request.url.path not in _PUBLIC_PATHS:
         if request.headers.get("X-App-Password") != APP_PASSWORD:
             return JSONResponse(status_code=401, content={"detail": "Неверный пароль"})
