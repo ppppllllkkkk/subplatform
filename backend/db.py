@@ -52,6 +52,7 @@ def init_db():
 def load_workbook():
     if not is_configured():
         return None
+    init_db()
     with _get_conn() as conn:
         row = conn.execute(
             "SELECT file_name, categories FROM workbook_store WHERE id = 1"
@@ -65,6 +66,7 @@ def load_workbook():
 def save_workbook(file_name: str, categories: list):
     if not is_configured():
         return
+    init_db()
     with _get_conn() as conn:
         conn.execute(
             """
@@ -83,6 +85,7 @@ def save_workbook(file_name: str, categories: list):
 def clear_workbook():
     if not is_configured():
         return
+    init_db()
     with _get_conn() as conn:
         conn.execute("DELETE FROM workbook_store WHERE id = 1")
         conn.commit()

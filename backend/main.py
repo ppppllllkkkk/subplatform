@@ -55,7 +55,15 @@ async def check_password(request: Request, call_next):
 
 @app.on_event("startup")
 def on_startup():
-    db.init_db()
+    try:
+        db.init_db()
+    except Exception as e:
+        # Не роняем весь сервис, если БД временно недоступна при старте
+        # (например, ещё поднимается при первом деплое, или сетевой сбой).
+        # SRF/RFQ/CBE не зависят от БД и должны продолжать работать;
+        # /api/database вернёт ошибку по факту обращения, если проблема
+        # не исчезнет сама.
+        print(f"[startup] БД недоступна при старте, продолжаю без неё: {e}")
 
 
 class RfqFields(BaseModel):
@@ -93,14 +101,20 @@ class WorkbookPayload(BaseModel):
 def database_get():
     if not db.is_configured():
         raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
-    return db.load_workbook()
+    try:
+        return db.load_workbook()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"База данных недоступна: {e}")
 
 
 @app.post("/api/database")
 def database_save(payload: WorkbookPayload):
     if not db.is_configured():
         raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
-    db.save_workbook(payload.fileName, payload.categories)
+    try:
+        db.save_workbook(payload.fileName, payload.categories)
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"База данных недоступна: {e}")
     return {"status": "ok"}
 
 
@@ -108,7 +122,10 @@ def database_save(payload: WorkbookPayload):
 def database_clear():
     if not db.is_configured():
         raise HTTPException(status_code=503, detail="База данных не подключена (нет DATABASE_URL)")
-    db.clear_workbook()
+    try:
+        db.clear_workbook()
+    except Exception as e:
+        raise HTTPException(status_code=503, detail=f"База данных недоступна: {e}")
     return {"status": "ok"}
 
 
