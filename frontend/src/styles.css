@@ -1,0 +1,75 @@
+@import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap");
+
+:root {
+  --bg: #f1f3f5;
+  --surface: #ffffff;
+  --ink: #1b2430;
+  --ink-soft: #5b6472;
+  --line: #dde2e8;
+  --blue: #2f5d8a;
+  --green: #2f8f5b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  font-family: "IBM Plex Sans", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.stamp {
+  display: inline-flex;
+  animation: stampIn 0.32s cubic-bezier(0.2, 1.4, 0.4, 1);
+}
+
+@keyframes stampIn {
+  0% {
+    transform: scale(2.2) rotate(-16deg);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(0.9) rotate(-6deg);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1) rotate(-6deg);
+    opacity: 1;
+  }
+}
+
+input:focus,
+textarea:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+}
+
+[contenteditable]:focus {
+  outline: 2px solid var(--blue);
+  outline-offset: -1px;
+  background: #eaf1f7;
+  text-overflow: unset;
+  overflow: visible;
+  max-width: none;
+  position: relative;
+  z-index: 1;
+}

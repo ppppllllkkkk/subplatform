@@ -1,0 +1,41 @@
+# Render Blueprint — разворачивает оба сервиса одной кнопкой:
+# Render Dashboard → New → Blueprint → указать этот репозиторий.
+#
+# Backend и frontend — два независимых сервиса (разные окружения и
+# процессы, см. README.md), но их публичные адреса нужны друг другу:
+#   - backend должен знать адрес frontend, чтобы разрешить CORS,
+#   - frontend должен знать адрес backend, чтобы к нему обращаться.
+# Ниже это решено через fromService/RENDER_EXTERNAL_HOSTNAME — Render
+# сам подставит реальные адреса после создания сервисов, вручную ничего
+# прописывать не нужно (в т.ч. если у имени сервиса добавится суффикс
+# из-за занятого поддомена).
+
+services:
+  # --- Backend: FastAPI, через Docker (нужен для tesseract/poppler — OCR) ---
+  - type: web
+    runtime: docker
+    name: subcontractor-platform-api
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    plan: free
+    healthCheckPath: /api/health
+    envVars:
+      - key: FRONTEND_ORIGIN
+        fromService:
+          name: subcontractor-platform-web
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
+
+  # --- Frontend: React + Vite, статическая сборка ---
+  - type: web
+    runtime: static
+    name: subcontractor-platform-web
+    rootDir: frontend
+    buildCommand: npm install && VITE_API_URL="https://${API_HOST}" npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: API_HOST
+        fromService:
+          name: subcontractor-platform-api
+          type: web
+          envVarKey: RENDER_EXTERNAL_HOSTNAME
