@@ -5,10 +5,9 @@
 # процессы, см. README.md), но их публичные адреса нужны друг другу:
 #   - backend должен знать адрес frontend, чтобы разрешить CORS,
 #   - frontend должен знать адрес backend, чтобы к нему обращаться.
-# Ниже это решено через fromService/RENDER_EXTERNAL_HOSTNAME — Render
-# сам подставит реальные адреса после создания сервисов, вручную ничего
-# прописывать не нужно (в т.ч. если у имени сервиса добавится суффикс
-# из-за занятого поддомена).
+# Адрес фронтенда для backend прописан напрямую (см. FRONTEND_ORIGIN ниже —
+# домены на Render стабильны после первого деплоя). Адрес backend для
+# frontend подставляется автоматически через fromService при каждой сборке.
 
 services:
   # --- Backend: FastAPI, через Docker (нужен для tesseract/poppler — OCR) ---
@@ -20,11 +19,12 @@ services:
     plan: free
     healthCheckPath: /api/health
     envVars:
+      # Прописан напрямую (не через fromService) — реальный адрес фронтенда
+      # уже известен и не меняется. Если когда-нибудь пересоздадите
+      # frontend-сервис под другим именем — обновите значение здесь и в
+      # дашборде (Environment → FRONTEND_ORIGIN).
       - key: FRONTEND_ORIGIN
-        fromService:
-          name: subcontractor-platform-web
-          type: web
-          envVarKey: RENDER_EXTERNAL_HOSTNAME
+        value: https://subcontractor-platform-web.onrender.com
       - key: APP_PASSWORD
         sync: false # спросит один раз при создании Blueprint'а в дашборде
       - key: DATABASE_URL
