@@ -23,9 +23,12 @@ app = FastAPI(title="Subcontractor Platform API")
 #
 # render.yaml подставляет сюда голый хост сервиса (без схемы, через
 # fromService/RENDER_EXTERNAL_HOSTNAME) — если схемы нет, достраиваем https://.
-FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173")
+FRONTEND_ORIGIN = os.environ.get("FRONTEND_ORIGIN", "http://localhost:5173").strip()
 if FRONTEND_ORIGIN and not FRONTEND_ORIGIN.startswith(("http://", "https://")):
     FRONTEND_ORIGIN = f"https://{FRONTEND_ORIGIN}"
+FRONTEND_ORIGIN = FRONTEND_ORIGIN.rstrip("/")
+
+print(f"[startup] CORS разрешён для FRONTEND_ORIGIN = {FRONTEND_ORIGIN!r}")
 
 app.add_middleware(
     CORSMiddleware,
