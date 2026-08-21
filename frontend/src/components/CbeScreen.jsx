@@ -47,7 +47,11 @@ export default function CbeScreen() {
         items: (r.items || []).map((it) => ({
           description: it.description,
           price: it.price,
-          itemId: it.status === "matched" ? it.matchedId : "",
+          // Раньше было одно itemId (строка). Теперь массив — одна цена
+          // от вендора иногда законно относится сразу к двум курсам шаблона
+          // (например, вендор объединил их в один пункт прайса под одну
+          // цену). Для уверенно сопоставленных строк — сразу один элемент.
+          itemIds: it.status === "matched" ? [it.matchedId] : [],
           candidates: it.candidates || [],
           status: it.status,
         })),
@@ -104,7 +108,11 @@ export default function CbeScreen() {
         if (!b.vendorId) return;
         const prices = {};
         b.items.forEach((it) => {
-          if (it.itemId && it.price) prices[it.itemId] = it.price;
+          if (it.price) {
+            it.itemIds.forEach((id) => {
+              prices[id] = it.price;
+            });
+          }
         });
         if (Object.keys(prices).length) assignments[b.vendorId] = prices;
       });
@@ -225,30 +233,50 @@ export default function CbeScreen() {
                   {block.items.map((it, itemIdx) => {
                     const meta = STATUS_META[it.status];
                     const Icon = meta.icon;
+                    const toggleItemId = (id) => {
+                      const next = it.itemIds.includes(id)
+                        ? it.itemIds.filter((x) => x !== id)
+                        : [...it.itemIds, id];
+                      updateItem(blockIdx, itemIdx, { itemIds: next });
+                    };
                     return (
                       <div key={itemIdx} style={styles.cbeItemRow}>
                         <Icon size={14} style={{ color: meta.color, flexShrink: 0, marginTop: 9 }} />
                         <div style={styles.cbeItemDesc} title={it.description}>
                           {it.description}
                         </div>
-                        <select
-                          style={{
-                            ...styles.cbeSelect,
-                            ...(it.status !== "matched" ? styles.cbeSelectAmbiguous : {}),
-                          }}
-                          value={it.itemId}
-                          onChange={(e) =>
-                            updateItem(blockIdx, itemIdx, { itemId: e.target.value })
-                          }
-                        >
-                          <option value="">— выберите курс —</option>
-                          {reference?.items.map((ci) => (
-                            <option key={ci.id} value={ci.id}>
-                              {it.candidates.includes(ci.id) ? "★ " : ""}
-                              {ci.name}
-                            </option>
-                          ))}
-                        </select>
+                        {it.status === "matched" ? (
+                          <select
+                            style={styles.cbeSelect}
+                            value={it.itemIds[0] || ""}
+                            onChange={(e) =>
+                              updateItem(blockIdx, itemIdx, {
+                                itemIds: e.target.value ? [e.target.value] : [],
+                              })
+                            }
+                          >
+                            <option value="">— выберите курс —</option>
+                            {reference?.items.map((ci) => (
+                              <option key={ci.id} value={ci.id}>
+                                {ci.name}
+                              </option>
+                            ))}
+                          </select>
+                        ) : (
+                          <div style={styles.cbeMultiPicker} title="Иногда одна цена вендора относится сразу к двум курсам шаблона — отметьте все подходящие">
+                            {reference?.items.map((ci) => (
+                              <label key={ci.id} style={styles.cbeMultiOption}>
+                                <input
+                                  type="checkbox"
+                                  checked={it.itemIds.includes(ci.id)}
+                                  onChange={() => toggleItemId(ci.id)}
+                                />
+                                {it.candidates.includes(ci.id) ? "★ " : ""}
+                                {ci.name}
+                              </label>
+                            ))}
+                          </div>
+                        )}
                         <input
                           style={styles.cbePriceInput}
                           value={it.price}
