@@ -633,6 +633,24 @@ export const styles = {
   cbeSelectAmbiguous: {
     borderColor: "#C98A2C",
   },
+  cbeMultiPicker: {
+    display: "flex",
+    flexDirection: "column",
+    gap: 4,
+    maxHeight: 140,
+    overflowY: "auto",
+    padding: "6px 8px",
+    border: "1px solid #C98A2C",
+    background: "#FFFBF3",
+    fontSize: 12,
+  },
+  cbeMultiOption: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: 6,
+    cursor: "pointer",
+    lineHeight: 1.3,
+  },
   cbeItemList: { display: "flex", flexDirection: "column", gap: 8 },
   cbeItemRow: {
     display: "grid",
